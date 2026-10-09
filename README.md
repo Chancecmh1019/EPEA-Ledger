@@ -40,9 +40,7 @@ Record dialogs preserve the surrounding page position and restore focus after cl
 
 ## History without Silent Changes
 
-A read-only CSV preview provides a separate space for examining an archive. File contents are processed locally in the browser; opening a preview does not upload transactions. Records are separated by account, and validation warnings remain visible.
-
-The project also includes a Python history-restoration utility that preserves original record identifiers and transaction fields. It checks existing cloud records, refuses mismatched history, and verifies restored data. It does not create balancing transactions or automatically reclassify historical corrections.
+The project includes a Python history-restoration utility that preserves original record identifiers and transaction fields. It checks existing cloud records, refuses mismatched history, and verifies restored data. It does not create balancing transactions or automatically reclassify historical corrections.
 
 Financial settings, including opening balances and a credit limit, are currently stored per account in the browser. Transaction history is stored in the cloud. This distinction is part of the application's current scope, and browser-local settings are not presented as synchronized account data.
 
