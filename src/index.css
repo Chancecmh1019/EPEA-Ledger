@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+TC:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@theme { --font-sans: "Inter", system-ui, sans-serif; --font-serif: "Noto Serif TC", Georgia, serif; }
+:root { font-family: var(--font-sans); color: #4a4a4a; background: #f5f2ed; color-scheme: light; scrollbar-gutter: stable; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+h1,h2,h3 { font-family: var(--font-serif); font-weight: 500; }
+h1 { font-size: 1.6rem; display: flex; align-items: center; gap: .5rem; }
+h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+p { font-size: .875rem; line-height: 1.7; overflow-wrap: anywhere; }
+button,input,select,textarea { font: inherit; min-height: 44px; border-radius: 14px; border: 1px solid #bccad6; background: #ffffff90; color: #4a4a4a; padding: .65rem .8rem; max-width: 100%; }
+button, a { touch-action: manipulation; }
+button { cursor: pointer; }
+button:disabled { opacity: .55; cursor: wait; }
+input,select,textarea { width: 100%; min-width: 0; }
+input[type=date],input[type=datetime-local] { font-size: 16px; }
+label { display: flex; flex-direction: column; gap: .4rem; font-size: .875rem; min-width: 0; margin-bottom: .85rem; }
+:focus-visible { outline: 3px solid #7a90a3; outline-offset: 3px; }
+.primary { background: #4a4a4a; color: #f5f2ed; border-color: #4a4a4a; }
+.app-shell { padding: max(16px,env(safe-area-inset-top)) 16px calc(115px + env(safe-area-inset-bottom)); max-width: 1280px; margin: auto; }
+header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 20px; }
+header > div { min-width: 0; } header p { font-size: .7rem; }
+header button { display: block; margin-top: 6px; }
+.card { background: #ffffff65; border: 1px solid #ffffffaa; border-radius: 28px; padding: 20px; margin-bottom: 18px; box-shadow: 0 4px 24px #4a4a4a08; min-width: 0; }
+.dashboard { display: grid; gap: 20px; grid-template-columns: minmax(0,1fr); }
+.form-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.form-actions { display: flex; gap: 12px; position: sticky; bottom: calc(var(--keyboard-inset,0px) + 88px); padding: 10px 0 max(10px,env(safe-area-inset-bottom)); background: #f5f2edef; }
+.form-actions button { flex: 1; }
+.amount-input { font: 2.2rem var(--font-serif); background: #ffffff60; }
+.sync-status { margin-bottom: 20px; padding: 12px; border-left: 3px solid #bccad6; }
+.sync-status button { margin: 6px 8px 0 0; }
+.warning { color: #815b5b; }
+.record { padding: 16px 0; border-bottom: 1px solid #bccad660; }
+.record-heading { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between; }
+.record h3 { overflow-wrap: anywhere; }
+.record-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.balance { font: clamp(1.6rem,6vw,2.5rem) var(--font-serif); overflow-wrap: anywhere; }
+.water-tank { position: relative; overflow: hidden; min-height: 260px; display: grid; place-items: center; }
+.water-fill { position: absolute; inset: auto 0 0; opacity: .45; }
+.water-fill svg { position: absolute; top: -25px; height: 30px; width: 100%; }
+.water-label { position: relative; text-align: center; max-width: 100%; }
+.balance-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+.ring { flex-shrink: 0; width: 70px; height: 70px; border: 9px solid #bccad6; border-radius: 50%; display: grid; place-items: center; font-size: .7rem; }
+.ring.pink { border-color: #d6adad; }
+.stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; } .stats strong { display: block; overflow-wrap: anywhere; }
+.chart { width: 100%; min-width: 0; margin-top: 16px; }
+.activity { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 6px; }
+.activity > div { border-radius: 6px; display: grid; place-items: center; height: 30px; font-size: .7rem; }
+.table-wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; } th,td { text-align: left; padding: 8px; font-size: .8rem; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.sheet { position: fixed; inset: var(--visual-top,0px) 0 auto; margin: 0 auto; width: min(100%,600px); max-height: var(--visual-height,100dvh); border: 1px solid #bccad6; border-radius: 28px; padding: 0; background: #f5f2ed; overflow-y: auto; overscroll-behavior: contain; }
+.sheet .form-actions { bottom: 0; }
+html[data-editing=true] .floating-nav { visibility: hidden; }
+button:active, .floating-nav a:active { background-color: #bccad6; color: #4a4a4a; }
+.sheet::backdrop { background: #4a4a4a55; }.sheet .card { margin: 0; }
+.floating-nav { position: fixed; bottom: max(12px,env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 7px; border-radius: 40px; background: #ffffffed; box-shadow: 0 8px 30px #4a4a4a20; border: 1px solid white; z-index: 20; }
+.floating-nav a { display: flex; flex-direction: column; align-items: center; padding: 10px 23px; border-radius: 30px; font-size: .75rem; text-decoration: none; color: #4a4a4a; min-height: 56px; }
+.floating-nav [aria-current] { background: #4a4a4a; color: #f5f2ed; }
+.login { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+@media (min-width: 850px) { .dashboard { grid-template-columns: repeat(2,minmax(0,1fr)); }.card { padding: 28px; }.app-shell { padding-top: 28px; }.sheet { top: calc(var(--visual-top,0px) + 3dvh); max-height: calc(var(--visual-height,100dvh) - 6dvh); } }
+@media (max-width: 360px) { .app-shell { padding-left: 12px; padding-right: 12px; }.card { padding: 16px; }header span { font-size: .8rem; }.floating-nav a { padding: 10px 20px; } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+@keyframes wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (max-height: 550px) and (max-width: 850px) { .floating-nav { position: static; transform: none; width: fit-content; margin: 15px auto; } }

@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.recovery/
+.private-audit/
+*.csv
+client_secret_*.json
+__pycache__/
+*.py[cod]
