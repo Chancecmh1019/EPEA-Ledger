@@ -14,7 +14,6 @@ import { BalanceRings } from './components/BalanceRings';
 import { ActivityGrid } from './components/ActivityGrid';
 import { LedgerChart } from './components/LedgerChart';
 import { Preferences } from './components/Preferences';
-import { ArchivePreview } from './components/ArchivePreview';
 import { RouteScroll, useNativeViewport, rememberRouteScroll } from './lib/viewport';
 class Boundary extends Component<{ children: React.ReactNode }, { error: string }> {
   state = { error: '' };
@@ -22,10 +21,36 @@ class Boundary extends Component<{ children: React.ReactNode }, { error: string 
   render() { return this.state.error ? <main className="card"><h1>無法安全顯示帳務</h1><p role="alert">{this.state.error}</p><p>原始資料仍保留。請先匯出瀏覽器儲存資料再重新載入。</p><button onClick={() => download('browser-recovery.json', { ...localStorage })}>匯出本機資料</button><button onClick={() => window.location.reload()}>重新載入</button></main> : this.props.children; }
 }
 function Identity({ onLogin }: { onLogin: (token: string) => void }) {
-  const [preview, setPreview] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [buttonWidth, setButtonWidth] = useState(() => Math.min(320, Math.max(200, window.innerWidth - 96)));
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  if (preview) return <main className="app-shell"><header><h1>浮生誌 · EPEA Ledger</h1><button onClick={() => setPreview(false)}>返回登入</button></header><ArchivePreview/></main>;
-  return <main className="login"><Leaf size={56} strokeWidth={1}/><h1>浮生誌</h1><p>Ephemera Ledger · EPEA Ledger</p><p>歲月留痕，讓每筆生活都有依據。</p>{clientId ? <GoogleOAuthProvider clientId={clientId}><GoogleLogin onSuccess={r => { if (r.credential) onLogin(r.credential); }} onError={() => {}} /></GoogleOAuthProvider> : <p role="status">Google 登入尚未設定。請設定公開 Client ID 與伺服器驗證設定。</p>}<button onClick={() => setPreview(true)}>開啟 CSV 唯讀檢視</button></main>;
+  useEffect(() => {
+    const resize = () => setButtonWidth(Math.min(320, Math.max(200, window.innerWidth - 96)));
+    window.addEventListener('resize', resize, { passive: true });
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+  return <main className="login">
+    <section className="login-card" aria-labelledby="login-title">
+      <div className="login-mark" aria-hidden="true"><Leaf size={44} strokeWidth={1.15}/></div>
+      <p className="login-eyebrow">EPHEMERA LEDGER</p>
+      <h1 id="login-title">浮生誌</h1>
+      <p className="login-tagline">把日常，慢慢記下。</p>
+      <p className="login-description">每一筆收支，都有生活的痕跡。<br/>回到你的帳本，接續今天的故事。</p>
+      <div className="login-divider" aria-hidden="true"><span/></div>
+      {clientId ? <GoogleOAuthProvider clientId={clientId} locale="zh-TW" onScriptLoadError={() => setLoginError('Google 登入服務未能載入，請確認網路連線後重新整理。')}>
+        <div className="login-google"><GoogleLogin
+          use_fedcm_for_button={true} theme="filled_black" shape="pill" size="large" text="continue_with" width={buttonWidth} logo_alignment="left"
+          click_listener={() => setLoginError('')}
+          onSuccess={r => { if (r.credential) { setLoginError(''); onLogin(r.credential); } }}
+          onError={() => setLoginError('未完成 Google 登入。請確認瀏覽器允許此網站的登入視窗，再重新嘗試。')}
+        /></div>
+      </GoogleOAuthProvider> : <p role="alert">Google 登入尚未設定。</p>}
+      <p className="login-continuity">使用原本的 Google 帳號，回到同一本帳。</p>
+      {loginError && <p className="login-error" role="alert">{loginError}</p>}
+      <details className="login-help"><summary>登入遇到問題？</summary><p>若登入視窗未開啟，請在瀏覽器網址列允許此網站的彈出式視窗，再按一次登入。也可暫停阻擋登入視窗的擴充套件後重試。</p></details>
+    </section>
+    <p className="login-footer">EPEA Ledger <span aria-hidden="true">·</span> 歲月留痕，收支有據。</p>
+  </main>;
 }
 function Ledger({ user, token, logout }: { user: User; token: string; logout: () => void }) {
   const ledger = useMemo(() => new SyncLedger(user.id, () => token, localStorage), [user.id, token]);
