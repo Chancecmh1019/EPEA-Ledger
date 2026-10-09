@@ -1,8 +1,8 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
-import { validateRecord } from '../src/domain/ledger';
-import { ApiError, configuredRepository, type Repository } from './repository';
-import type { User } from '../src/types';
+import { validateRecord } from '../src/domain/ledger.js';
+import { ApiError, configuredRepository, type Repository } from './repository.js';
+import type { User } from '../src/types.js';
 export type Verify = (token: string) => Promise<User>;
 const oauth = new OAuth2Client();
 export async function verifyGoogle(token: string): Promise<User> {

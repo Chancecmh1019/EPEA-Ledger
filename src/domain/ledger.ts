@@ -1,5 +1,5 @@
-import type { FinancialSettings, RecordData } from '../types';
-import { defaultSettings } from '../types';
+import type { FinancialSettings, RecordData } from '../types.js';
+import { defaultSettings } from '../types.js';
 export function money(value: unknown): number {
   if (typeof value !== 'number' && (typeof value !== 'string' || !/^\d+(?:\.0+)?$/.test(value))) throw new Error('金額須為非負整數新臺幣');
   const result = Number(value);

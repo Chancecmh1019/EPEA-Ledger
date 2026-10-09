@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { RecordData } from '../src/types';
+import type { RecordData } from '../src/types.js';
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 export interface Repository {
   snapshot(owner: string): Promise<RecordData[]>;

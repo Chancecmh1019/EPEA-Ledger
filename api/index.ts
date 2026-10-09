@@ -1,2 +1,2 @@
-import { createApi } from '../backend/app';
+import { createApi } from '../backend/app.js';
 export default createApi();
