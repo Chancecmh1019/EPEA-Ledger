@@ -6,7 +6,7 @@ A personal ledger for the small transactions that make up everyday life.
 
 EPEA Ledger brings income, expenses, cash movements, and credit card activity into a calm, cohesive space. Its name reflects a simple idea: everyday moments may be fleeting, but their financial traces deserve clarity and continuity. A purchase, a repayment, or a short note becomes part of a history that remains understandable over time.
 
-The application pairs a literary visual character with explicit financial meaning. Warm cream backgrounds, soft blue and pink accents, generous spacing, and a water-inspired dashboard give the ledger a gentle presence. Beneath that presentation, records retain their identity, account ownership, and revision history.
+The application pairs a literary visual character with explicit financial meaning. A quiet paper background, deep ink tones, green and warm coral accents, and deliberate typography give every screen a shared visual language. Beneath that presentation, records retain their identity, account ownership, and revision history.
 
 ## A Clearer Picture of Personal Finances
 
@@ -20,9 +20,9 @@ Explicit adjustments carry a reason and an effective time. Historical descriptio
 
 Each transaction can hold an amount, a date, a description, a note, a payment method, and an urgency marker. Income, expenses, card repayments, and explicit adjustments have distinct accounting roles.
 
-The record archive offers search and filters for dates, transaction types, and payment methods. Editing and deletion are visible actions, supported by confirmation and revision checks. Deletion removes a transaction from the active ledger while retaining its historical trace in the database.
+The recording screen puts the amount first, defaults to an expense, and remembers the last successfully used payment method. Descriptions and notes are optional for ordinary entries. The record archive groups transactions by day and offers search and filters for dates, transaction types, and payment methods. Editing and deletion are visible actions, supported by confirmation and revision checks. Deletion removes a transaction from the active ledger while retaining its historical trace in the database.
 
-Period summaries and charts provide views across days, weeks, months, years, and the most recent thirty days. An activity grid offers a compact picture of recent recording activity. These views share the same accounting rules, so their totals have a consistent basis.
+A daily spending summary accompanies quick entry, while the overview provides views of the current week, month, year, and the most recent thirty days. A compact daily or monthly bar chart shows income and spending without decorative financial metaphors. These views share the same accounting rules, so their totals have a consistent basis.
 
 ## Continuity Across Sessions
 
@@ -34,7 +34,7 @@ Local drafts and pending operations support recovery when a save fails. The edit
 
 ## A Comfortable Mobile Experience
 
-EPEA Ledger uses native scrolling and direct, visible controls. Its layout adapts to narrow screens, safe areas, and changes in the available viewport when an on-screen keyboard appears.
+EPEA Ledger is organized around four direct destinations: recording, history, overview, and account. It uses native scrolling and visible editing and deletion controls. Its layout adapts to narrow screens, safe areas, and changes in the available viewport when an on-screen keyboard appears.
 
 Record dialogs preserve the surrounding page position and restore focus after closing. Search and editing remain connected to their place in the archive, while reduced-motion preferences support a quieter experience. The interface is written in Traditional Chinese, with New Taiwan Dollar amounts and Taipei-based calendar periods.
 
@@ -52,7 +52,7 @@ Private transaction archives, environment credentials, recovery files, and gener
 
 ## Built With
 
-EPEA Ledger uses React and TypeScript for the interface, Tailwind CSS for styling, and Recharts for financial visualization. An Express API verifies Google identity and connects to Supabase PostgreSQL. Vite provides the application build pipeline.
+EPEA Ledger uses React and TypeScript for the interface, Tailwind CSS for styling, and lightweight native charts for financial visualization. An Express API verifies Google identity and connects to Supabase PostgreSQL. Vite provides the application build pipeline.
 
 ## Author
 

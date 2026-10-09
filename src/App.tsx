@@ -1,24 +1,23 @@
 import { Component, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
-import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
-import { Leaf, Plus, ChartNoAxesCombined, Clock } from 'lucide-react';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, Check, ChevronRight, Cloud, CloudOff, LayoutDashboard, List, Plus, RefreshCw, UserRound } from 'lucide-react';
 import type { FinancialSettings, User } from './types';
 import { defaultSettings } from './types';
-import { calculateLedger, correctionCandidate } from './domain/ledger';
+import { calculateLedger, periodRange, taipeiDay } from './domain/ledger';
 import { SyncLedger } from './lib/sync';
 import { download } from './lib/export';
-import { WaterTank } from './components/WaterTank';
-import { FluidSlider } from './components/FluidSlider';
-import { RecordList } from './components/RecordList';
-import { BalanceRings } from './components/BalanceRings';
-import { ActivityGrid } from './components/ActivityGrid';
-import { LedgerChart } from './components/LedgerChart';
-import { Preferences } from './components/Preferences';
-import { RouteScroll, useNativeViewport, rememberRouteScroll } from './lib/viewport';
+import { formatCurrency } from './lib/utils';
+import { TransactionForm } from './components/TransactionForm';
+import { TransactionHistory } from './components/TransactionHistory';
+import { Overview } from './components/Overview';
+import { Account } from './components/Account';
+import { RouteScroll, rememberRouteScroll, useNativeViewport } from './lib/viewport';
+
 class Boundary extends Component<{ children: React.ReactNode }, { error: string }> {
   state = { error: '' };
   static getDerivedStateFromError(error: Error) { return { error: error.message }; }
-  render() { return this.state.error ? <main className="card"><h1>無法安全顯示帳務</h1><p role="alert">{this.state.error}</p><p>原始資料仍保留。請先匯出瀏覽器儲存資料再重新載入。</p><button onClick={() => download('browser-recovery.json', { ...localStorage })}>匯出本機資料</button><button onClick={() => window.location.reload()}>重新載入</button></main> : this.props.children; }
+  render() { return this.state.error ? <main className="recovery-page"><div className="brand-symbol">e.</div><h1>先保護你的紀錄</h1><p role="alert">{this.state.error}</p><p>目前無法安全顯示帳本。你可以先匯出本機資料，再重新整理。</p><button className="button primary" onClick={() => download('browser-recovery.json', { ...localStorage })}>匯出本機資料</button><button className="button secondary" onClick={() => window.location.reload()}>重新整理</button></main> : this.props.children; }
 }
 function Identity({ onLogin }: { onLogin: (token: string) => void }) {
   const [loginError, setLoginError] = useState('');
@@ -29,53 +28,43 @@ function Identity({ onLogin }: { onLogin: (token: string) => void }) {
     window.addEventListener('resize', resize, { passive: true });
     return () => window.removeEventListener('resize', resize);
   }, []);
-  return <main className="login">
-    <section className="login-card" aria-labelledby="login-title">
-      <div className="login-mark" aria-hidden="true"><Leaf size={44} strokeWidth={1.15}/></div>
-      <p className="login-eyebrow">EPHEMERA LEDGER</p>
-      <h1 id="login-title">浮生誌</h1>
-      <p className="login-tagline">把日常，慢慢記下。</p>
-      <p className="login-description">每一筆收支，都有生活的痕跡。<br/>回到你的帳本，接續今天的故事。</p>
-      <div className="login-divider" aria-hidden="true"><span/></div>
-      {clientId ? <GoogleOAuthProvider clientId={clientId} locale="zh-TW" onScriptLoadError={() => setLoginError('Google 登入服務未能載入，請確認網路連線後重新整理。')}>
-        <div className="login-google"><GoogleLogin
-          use_fedcm_for_button={true} theme="filled_black" shape="pill" size="large" text="continue_with" width={buttonWidth} logo_alignment="left"
-          click_listener={() => setLoginError('')}
-          onSuccess={r => { if (r.credential) { setLoginError(''); onLogin(r.credential); } }}
-          onError={() => setLoginError('未完成 Google 登入。請確認瀏覽器允許此網站的登入視窗，再重新嘗試。')}
-        /></div>
-      </GoogleOAuthProvider> : <p role="alert">Google 登入尚未設定。</p>}
-      <p className="login-continuity">使用原本的 Google 帳號，回到同一本帳。</p>
-      {loginError && <p className="login-error" role="alert">{loginError}</p>}
-      <details className="login-help"><summary>登入遇到問題？</summary><p>若登入視窗未開啟，請在瀏覽器網址列允許此網站的彈出式視窗，再按一次登入。也可暫停阻擋登入視窗的擴充套件後重試。</p></details>
-    </section>
-    <p className="login-footer">EPEA Ledger <span aria-hidden="true">·</span> 歲月留痕，收支有據。</p>
-  </main>;
+  return <main className="login-page"><div className="login-brand"><div className="brand-symbol">e.</div><span>EPHEMERA LEDGER</span></div>
+    <section className="login-layout"><div className="login-story"><p className="eyebrow">THE EVERYDAY, ACCOUNTED FOR.</p><h1>生活往前。<br/>收支，記得。</h1><p>忙碌的日子，也能留下一本清楚的帳。</p><div className="login-editorial" aria-hidden="true"><span>收入</span><div><span>日常支出</span><strong>每一筆，都有去向。</strong></div><span>明天繼續。</span></div></div>
+    <div className="login-panel"><p className="eyebrow">浮生誌 · EPEA LEDGER</p><h2>回到你的帳本</h2><p className="muted">記下一筆，然後繼續生活。</p>
+      {clientId ? <GoogleOAuthProvider clientId={clientId} locale="zh-TW" onScriptLoadError={() => setLoginError('Google 登入服務未能載入，請確認網路連線後重新整理。')}><div className="login-google"><GoogleLogin use_fedcm_for_button={true} theme="filled_black" shape="pill" size="large" text="continue_with" width={buttonWidth} logo_alignment="left" click_listener={() => setLoginError('')} onSuccess={response => { if (response.credential) { setLoginError(''); onLogin(response.credential); } }} onError={() => setLoginError('未完成 Google 登入。請確認瀏覽器允許此網站的登入視窗，再重新嘗試。')}/></div></GoogleOAuthProvider> : <p role="alert">Google 登入尚未設定。</p>}
+      <p className="login-assurance"><Check size={15}/>原本的帳號，同一本帳。</p>{loginError && <p className="notice error" role="alert">{loginError}</p>}<details className="login-help"><summary>登入遇到問題？</summary><p>若登入視窗未開啟，請允許此網站的彈出式視窗，再重新嘗試。</p></details>
+    </div></section><footer className="login-footer">Ephemera Ledger / 浮生誌 <span>YOUR DAYS, IN BALANCE.</span></footer></main>;
 }
+const navigation = [{ to: '/', label: '記一筆', Icon: Plus }, { to: '/history', label: '紀錄', Icon: List }, { to: '/dashboard', label: '總覽', Icon: LayoutDashboard }, { to: '/account', label: '帳戶', Icon: UserRound }];
 function Ledger({ user, token, logout }: { user: User; token: string; logout: () => void }) {
   const ledger = useMemo(() => new SyncLedger(user.id, () => token, localStorage), [user.id, token]);
   const state = useSyncExternalStore(ledger.subscribe, ledger.snapshot);
   const location = useLocation();
+  const navigate = useNavigate();
   const key = 'epea:settings:' + user.id;
-  const [settings, setSettings] = useState<FinancialSettings>(() => { try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? defaultSettings; } catch { return defaultSettings; } });
-  const f = useMemo(() => calculateLedger(state.records, settings), [state.records,settings]);
+  const [settings, setSettings] = useState<FinancialSettings>(() => { try { return { ...defaultSettings, ...JSON.parse(localStorage.getItem(key) ?? 'null') }; } catch { return defaultSettings; } });
+  const financials = useMemo(() => calculateLedger(state.records, settings), [state.records, settings]);
+  const today = useMemo(() => calculateLedger(state.records, undefined, periodRange('day')), [state.records]);
+  const pendingIds = state.pending.map(operation => operation.record.id);
   useEffect(() => {
     void ledger.refresh();
     const refresh = () => { if (document.visibilityState === 'visible') void ledger.refresh(); };
     window.addEventListener('online', refresh); document.addEventListener('visibilitychange', refresh);
     return () => { window.removeEventListener('online', refresh); document.removeEventListener('visibilitychange', refresh); };
   }, [ledger]);
-  return <main className="app-shell"><RouteScroll/><header><div><h1><Leaf size={22}/>浮生誌</h1><p>Ephemera Ledger · EPEA Ledger</p></div><div><span>{user.name}</span><button onClick={logout}>登出</button></div></header>
-    <section className="sync-status" aria-live="polite"><p>{state.busy ? '同步中…' : state.message} · {state.records.length} 筆</p>{state.stale && <strong>快取尚未驗證，金額不能視為目前餘額</strong>}<button disabled={state.busy} onClick={() => void ledger.refresh()}>重新同步</button><button onClick={() => download('ledger-recovery.json', { confirmed: state.records, pending: state.pending, settings, legacy: localStorage.getItem('epea:legacy-backup:' + user.id) })}>匯出備份</button></section>
-    {!!state.pending.length && <section className="card"><h2>待處理操作（不計入已確認金額）</h2>{state.pending.map(p => <article key={p.id}><p>{p.record.description} · {p.method} · {p.status === 'pending' ? '已儲存本機／待同步' : p.status === 'conflict' ? '衝突需審查' : '失敗'} {p.error}</p><button disabled={state.busy} onClick={() => { if (window.confirm('保留復原副本後，取消這筆待處理操作？')) ledger.discard(p.id); }}>取消待處理操作</button></article>)}</section>}
-    {!!f.issues.length && <section className="card warning" role="alert"><h2>資料需核對，以下金額不完整</h2>{f.issues.map((issue,i) => <p key={i}>{issue.id}：{issue.reason}</p>)}</section>}
-    <Routes><Route path="/" element={<div className="dashboard"><FluidSlider owner={user.id} onSave={async r => ledger.enqueue('POST',r)}/><WaterTank financials={f} isRefreshing={state.busy}/></div>}/>
-      <Route path="/dashboard" element={<div className="dashboard"><div><BalanceRings financials={f}/><ActivityGrid financials={f}/><Preferences settings={settings} onSave={s => { localStorage.setItem(key, JSON.stringify(s)); setSettings(s); }}/></div><LedgerChart records={state.records}/></div>}/>
-      <Route path="/history" element={<RecordList owner={user.id} records={f.records} pendingIds={state.pending.map(p=>p.record.id)} onUpdate={async r=>ledger.enqueue('PUT',r)} onDelete={async r=>ledger.enqueue('DELETE',r)} history={id=>ledger.api('/api/records/' + encodeURIComponent(id) + '/history')}/>}/>
-      <Route path="*" element={<p>頁面不存在，請使用下方導覽。</p>}/></Routes>
-    <details className="card"><summary>校正候選模擬（不修改資料）</summary><p>文字僅表示候選；無法單憑「校正」推定原意。期初未確認時以下是現金變動。</p><p>含全部候選：{f.cashMovement.toLocaleString()}；假設排除全部候選：{calculateLedger(state.records.filter(r=>!correctionCandidate(r)),settings).cashMovement.toLocaleString()}</p>{f.records.filter(correctionCandidate).map(r=><p key={r.id}>{r.description} · {r.id} · {r.payment_method} · {r.type} · {r.amount} · 原意待審查</p>)}</details>
-    <nav className="floating-nav" aria-label="主要導覽">{[{to:'/',label:'盲記',Icon:Plus},{to:'/dashboard',label:'圖表',Icon:ChartNoAxesCombined},{to:'/history',label:'時光',Icon:Clock}].map(({to,label,Icon})=><Link key={to} to={to} onClick={() => rememberRouteScroll(location.pathname)} aria-current={location.pathname===to?'page':undefined}><Icon size={20}/>{label}</Link>)}</nav>
-  </main>;
+  const listProps = { owner: user.id, records: financials.records, pendingIds, onUpdate: async (record: Parameters<typeof ledger.enqueue>[1]) => ledger.enqueue('PUT', record), onDelete: async (record: Parameters<typeof ledger.enqueue>[1]) => ledger.enqueue('DELETE', record), history: (id: string) => ledger.api('/api/records/' + encodeURIComponent(id) + '/history') };
+  const pageTitle = navigation.find(item => item.to === location.pathname)?.label ?? '浮生誌';
+  return <div className="workspace"><RouteScroll/>
+    <aside className="sidebar"><Link className="brand" to="/" onClick={() => rememberRouteScroll(location.pathname)}><span className="brand-symbol">e.</span><span><strong>浮生誌</strong><small>EPEA LEDGER</small></span></Link><nav className="desktop-nav" aria-label="主要導覽">{navigation.map(({ to, label, Icon }) => <Link key={to} to={to} onClick={() => rememberRouteScroll(location.pathname)} aria-current={location.pathname === to ? 'page' : undefined}><Icon size={21}/>{label}{to === '/' && <span className="nav-short-label" aria-hidden="true">NEW</span>}</Link>)}</nav><p className="sidebar-note">生活的細節，<br/>一本一本記得。</p><button className="sidebar-account" onClick={() => { rememberRouteScroll(location.pathname); navigate('/account'); }}><span>{user.name.slice(0, 1)}</span><strong>{user.name}</strong><ChevronRight size={17}/></button></aside>
+    <main className="main-content"><header className="app-header"><Link className="mobile-brand" to="/" onClick={() => rememberRouteScroll(location.pathname)}><span className="brand-symbol">e.</span><strong>浮生誌</strong></Link><span className="desktop-breadcrumb">EPEA Ledger <span>/</span> {pageTitle}</span><button className={`sync-indicator ${state.stale || state.pending.length ? 'needs-attention' : ''}`} disabled={state.busy} onClick={() => void ledger.refresh()} aria-label="重新同步">{state.busy ? <RefreshCw size={15}/> : state.stale ? <CloudOff size={15}/> : <Cloud size={15}/>}<span>{state.busy ? '同步中' : state.pending.length ? `${state.pending.length} 筆待確認` : state.stale ? '離線快照' : '已同步'}</span></button></header>
+      {(state.stale || state.pending.length > 0) && <div className="sync-notice" role="status"><span>{state.stale ? '目前顯示上次快照，金額尚未確認。' : '有操作尚未確認，暫不計入統計。'}</span><Link to="/account" onClick={() => rememberRouteScroll(location.pathname)}>查看狀態<ArrowRight size={14}/></Link></div>}
+      {!!financials.issues.length && <div className="notice error" role="alert">有 {financials.issues.length} 筆資料需核對，統計可能不完整。<details><summary>查看原因</summary>{financials.issues.map((issue, index) => <p key={index}>{issue.id}：{issue.reason}</p>)}</details></div>}
+      <div className="page-heading"><div><p className="eyebrow">{location.pathname === '/' ? taipeiDay(new Date()).replaceAll('-', ' / ') : location.pathname === '/history' ? 'YOUR TRANSACTIONS' : location.pathname === '/dashboard' ? 'THE BIGGER PICTURE' : 'YOUR LEDGER'}</p><h1>{location.pathname === '/' ? '記一筆，繼續今天。' : location.pathname === '/history' ? '每一筆，都在這裡。' : location.pathname === '/dashboard' ? '看清你的收支。' : '你的帳本與設定。'}</h1></div>{location.pathname === '/history' && <Link className="button primary heading-add" to="/" onClick={() => rememberRouteScroll(location.pathname)}><Plus size={18}/>記一筆</Link>}</div>
+      <Routes><Route path="/" element={<div className="entry-layout"><section className="entry-surface"><TransactionForm owner={user.id} pendingIds={pendingIds} confirmedRecords={state.records} onSave={async record => ledger.enqueue('POST', record)}/></section><section className="entry-context"><div className="today-summary"><span>今天已記支出</span><strong>{formatCurrency(today.expense)}</strong><Link to="/dashboard" onClick={() => rememberRouteScroll(location.pathname)}>查看總覽<ArrowRight size={15}/></Link></div><div className="section-heading recent-heading"><h2>最近記下的</h2><Link to="/history" onClick={() => rememberRouteScroll(location.pathname)}>全部紀錄<ChevronRight size={16}/></Link></div><TransactionHistory {...listProps} recent/></section></div>}/><Route path="/history" element={<TransactionHistory {...listProps}/>}/><Route path="/dashboard" element={<Overview records={state.records} settings={settings} onSettings={() => { rememberRouteScroll(location.pathname); navigate('/account?settings=1'); }}/>}/><Route path="/account" element={<Account user={user} state={state} ledger={ledger} settings={settings} onSettings={value => { localStorage.setItem(key, JSON.stringify(value)); setSettings(value); }} logout={logout} initialSettings={new URLSearchParams(location.search).has('settings')}/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>
+      <footer className="app-footer"><span>浮生誌 · Ephemera Ledger</span><span>每天一點，清楚一點。</span></footer>
+    </main>
+    <nav className="mobile-nav" aria-label="手機主要導覽">{navigation.map(({ to, label, Icon }) => <Link key={to} to={to} onClick={() => rememberRouteScroll(location.pathname)} aria-current={location.pathname === to ? 'page' : undefined}><Icon size={21}/><span>{label}</span></Link>)}</nav>
+  </div>;
 }
 function Session() {
   const [token, setToken] = useState(() => sessionStorage.getItem('epea:id-token') ?? '');
