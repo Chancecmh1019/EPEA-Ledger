@@ -13,7 +13,8 @@
     "start": "node dist/server.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build:web": "vite build"
   },
   "dependencies": {
     "@react-oauth/google": "0.13.5",

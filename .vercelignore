@@ -1,0 +1,14 @@
+.vercel/
+.env
+.env.*
+!.env.example
+client_secret_*.json
+*.csv
+.recovery/
+.private-audit/
+node_modules/
+dist/
+.git/
+__pycache__/
+*.py[cod]
+*.log

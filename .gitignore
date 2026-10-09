@@ -12,3 +12,4 @@ coverage/
 client_secret_*.json
 __pycache__/
 *.py[cod]
+.vercel/

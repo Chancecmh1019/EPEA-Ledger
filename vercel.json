@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:web",
   "framework": "vite",
   "rewrites": [
     {
@@ -16,5 +16,6 @@
     "api/**/*.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "outputDirectory": "dist"
 }
