@@ -60,14 +60,14 @@ export function TransactionForm({ owner, initial, onSave, onCancel, pendingIds =
       localStorage.setItem(key, JSON.stringify(submitted));
       setDraft(submitted);
       await onSave(record);
-      // A confirmed cloud response, rather than a queued request, completes the form.
+      // New entries complete after durable local save; edits still await cloud confirmation.
       localStorage.removeItem(key);
       if (!initial) {
         localStorage.setItem(preferenceKey, JSON.stringify({ method: draft.method }));
         setDraft(fresh());
         input.current?.blur();
       }
-      setSuccess(`${draft.type === 'income' ? '收入' : '支出'} ${formatCurrency(record.amount)} 已儲存`);
+      setSuccess(`${draft.type === 'income' ? '收入' : '支出'} ${formatCurrency(record.amount)} ${initial ? '已同步' : '已保存至此裝置，將自動同步'}`);
     } catch (failure) { setError((failure as Error).message); }
     finally { lock.current = false; setBusy(false); onBusy?.(false); }
   }

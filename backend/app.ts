@@ -3,6 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { validateRecord } from '../src/domain/ledger.js';
 import { ApiError, configuredRepository, type Repository } from './repository.js';
 import type { User } from '../src/types.js';
+import { clearSession, loggedOut, readSession, sameOrigin, writeSession } from './session.js';
 export type Verify = (token: string) => Promise<User>;
 const oauth = new OAuth2Client();
 export async function verifyGoogle(token: string): Promise<User> {
@@ -24,12 +25,23 @@ export function createApi(options: { repository?: Repository | null; verify?: Ve
   app.get('/api/health', (_req, res) => res.status(repo ? 200 : 503).json({ configured: !!repo, persistence: 'supabase', schemaVerified: false }));
   const auth = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      if (loggedOut(req)) throw new ApiError(401, '已登出；請重新登入');
       const token = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
-      if (!token) throw new ApiError(401, '請登入');
-      res.locals.user = await verify(token);
+      const user = readSession(req, res);
+      if (!user && !token) throw new ApiError(401, '登入需要重新確認；本機紀錄會保留');
+      res.locals.user = user ?? await verify(token!);
+      if (!user) writeSession(req, res, res.locals.user, true);
       next();
     } catch (error) { next(error); }
   };
+  app.use('/api', (req, _res, next) => { try { sameOrigin(req); next(); } catch (error) { next(error); } });
+  app.post('/api/auth/session', async (req, res) => {
+    if (typeof req.body?.credential !== 'string') throw new ApiError(400, '缺少 Google 登入憑證');
+    const user = await verify(req.body.credential);
+    writeSession(req, res, user, true);
+    res.json(user);
+  });
+  app.post('/api/auth/logout', (req, res) => { clearSession(req, res); res.status(204).end(); });
   app.get('/api/auth/me', auth, (_req, res) => res.json(res.locals.user));
   app.use('/api', auth, (_req, _res, next) => repo ? next() : next(new ApiError(503, 'Supabase 尚未設定，不會回報雲端儲存成功')));
   app.get('/api/records', async (_req, res) => res.json(await repo!.snapshot(res.locals.user.id)));

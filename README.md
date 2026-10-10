@@ -30,6 +30,10 @@ Google sign-in ties the ledger to a verified, stable Google account identifier. 
 
 Synchronization has visible states. Confirmed records, pending operations, failed requests, and conflicts are treated separately. Pending changes do not enter confirmed totals before the server acknowledges them, and repeated requests retain stable identifiers to avoid creating duplicate transactions.
 
+Trusted devices keep a server-signed, HTTP-only session that lasts up to ninety days without activity and renews during regular use. Temporary connection failures do not erase the remembered account. Opening the ledger, returning to its tab, and restoring a connection trigger background synchronization without refreshing away an unfinished entry.
+
+New entries are saved to a durable, account-specific local queue immediately, allowing the next entry to begin while cloud synchronization proceeds. An installed application shell supports reopening the ledger offline after a successful online visit. Local saves remain explicitly separate from confirmed cloud totals. Reauthentication, when required, preserves the queue and resumes synchronization for the matching account.
+
 Local drafts and pending operations support recovery when a save fails. The editor retains entered information, and a recovery export includes confirmed records, pending changes, and financial settings. Cached data that has not been verified is explicitly marked as such.
 
 ## A Comfortable Mobile Experience

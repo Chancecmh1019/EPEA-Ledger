@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { Component, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, ChevronRight, Cloud, CloudOff, LayoutDashboard, List, Plus, RefreshCw, UserRound } from 'lucide-react';
@@ -49,9 +49,12 @@ function Ledger({ user, token, logout }: { user: User; token: string; logout: ()
   useEffect(() => {
     void ledger.refresh();
     const refresh = () => { if (document.visibilityState === 'visible') void ledger.refresh(); };
-    window.addEventListener('online', refresh); document.addEventListener('visibilitychange', refresh);
-    return () => { window.removeEventListener('online', refresh); document.removeEventListener('visibilitychange', refresh); };
-  }, [ledger]);
+    const storage = (event: StorageEvent) => { if (event.key === 'epea:v1:' + user.id) ledger.reloadCache(); };
+    window.addEventListener('storage', storage);
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener('offline', refresh); window.addEventListener('focus', refresh); window.addEventListener('online', refresh); document.addEventListener('visibilitychange', refresh);
+    return () => { window.removeEventListener('storage', storage); window.clearInterval(timer); window.removeEventListener('offline', refresh); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [ledger, user.id]);
   const listProps = { owner: user.id, records: financials.records, pendingIds, onUpdate: async (record: Parameters<typeof ledger.enqueue>[1]) => ledger.enqueue('PUT', record), onDelete: async (record: Parameters<typeof ledger.enqueue>[1]) => ledger.enqueue('DELETE', record), history: (id: string) => ledger.api('/api/records/' + encodeURIComponent(id) + '/history') };
   const pageTitle = navigation.find(item => item.to === location.pathname)?.label ?? '浮生誌';
   return <div className="workspace"><RouteScroll/>
@@ -66,16 +69,83 @@ function Ledger({ user, token, logout }: { user: User; token: string; logout: ()
     <nav className="mobile-nav" aria-label="手機主要導覽">{navigation.map(({ to, label, Icon }) => <Link key={to} to={to} onClick={() => rememberRouteScroll(location.pathname)} aria-current={location.pathname === to ? 'page' : undefined}><Icon size={21}/><span>{label}</span></Link>)}</nav>
   </div>;
 }
+const identityKey = 'epea:session-user';
+function cachedUser(): User | null {
+  try {
+    const value = JSON.parse(localStorage.getItem(identityKey) ?? 'null');
+    return /^google-[0-9]+$/.test(value?.id) && typeof value.name === 'string' ? value : null;
+  } catch { return null; }
+}
 function Session() {
-  const [token, setToken] = useState(() => sessionStorage.getItem('epea:id-token') ?? '');
-  const [user, setUser] = useState<User | null>(null), [error, setError] = useState('');
+  // This is a display cache only. Every cloud request is authorized by the server cookie.
+  const [user, setUser] = useState<User | null>(cachedUser);
+  const [checking, setChecking] = useState(true), [error, setError] = useState('');
+  const [needsLogin, setNeedsLogin] = useState(false), [showLogin, setShowLogin] = useState(false);
+  const generation = useRef(0);
   useEffect(() => {
-    if (!token) return;
-    const controller = new AbortController();
-    fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token},signal:controller.signal}).then(async res=>{if(!res.ok) throw new Error('登入驗證失敗，請重新登入'); return res.json();}).then(setUser).catch(err=>{if(!controller.signal.aborted){setError(err.message);setToken('');sessionStorage.removeItem('epea:id-token');}});
-    return ()=>controller.abort();
-  },[token]);
-  if (!user || !token) return <><Identity onLogin={value=>{sessionStorage.setItem('epea:id-token',value);setToken(value);setError('');}}/>{error && <p role="alert">{error}</p>}</>;
-  return <Ledger key={user.id} user={user} token={token} logout={()=>{sessionStorage.removeItem('epea:id-token');setToken('');setUser(null);}}/>;
+    let active = true, running = false;
+    const check = async () => {
+      if (running) return;
+      running = true;
+      const current = generation.current;
+      try {
+        const legacy = sessionStorage.getItem('epea:id-token');
+        const response = await fetch('/api/auth/me', { credentials: 'same-origin', headers: legacy ? { Authorization: 'Bearer ' + legacy } : {}, signal: AbortSignal.timeout(15000) });
+        if (!active || current !== generation.current) return;
+        if (response.status === 401) {
+          sessionStorage.removeItem('epea:id-token');
+          setNeedsLogin(true);
+          return;
+        }
+        if (!response.ok) throw new Error('暫時無法確認連線；紀錄會先保存在此裝置。');
+        const identity: User = await response.json();
+        if (!active || current !== generation.current) return;
+        localStorage.setItem(identityKey, JSON.stringify(identity));
+        sessionStorage.removeItem('epea:id-token');
+        setUser(identity); setNeedsLogin(false); setError('');
+      } catch (failure) {
+        if (active && current === generation.current) setError(['TypeError', 'TimeoutError', 'AbortError'].includes((failure as Error).name) ? '目前無法連線；紀錄會先保存在此裝置。' : (failure as Error).message);
+      } finally { running = false; if (active) setChecking(false); }
+    };
+    const resume = () => { if (document.visibilityState === 'visible') void check(); };
+    const required = () => setNeedsLogin(true);
+    const storage = (event: StorageEvent) => {
+      if (event.key !== identityKey) return;
+      generation.current++;
+      setUser(cachedUser()); setShowLogin(false); setNeedsLogin(false);
+      void check();
+    };
+    void check();
+    const timer = window.setInterval(resume, 60000);
+    window.addEventListener('focus', resume); window.addEventListener('online', resume);
+    document.addEventListener('visibilitychange', resume); window.addEventListener('epea:auth-required', required);
+    window.addEventListener('storage', storage);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', resume); window.removeEventListener('online', resume); document.removeEventListener('visibilitychange', resume); window.removeEventListener('epea:auth-required', required); window.removeEventListener('storage', storage); };
+  }, []);
+  const login = async (credential: string) => {
+    generation.current++;
+    setChecking(true); setError('');
+    try {
+      const response = await fetch('/api/auth/session', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential }), signal: AbortSignal.timeout(15000) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? '暫時無法完成登入，請再試一次。');
+      localStorage.setItem(identityKey, JSON.stringify(result));
+      sessionStorage.removeItem('epea:id-token');
+      setUser(result); setNeedsLogin(false); setShowLogin(false);
+      window.dispatchEvent(new Event('online'));
+    } catch (failure) { setError((failure as Error).message); }
+    finally { setChecking(false); }
+  };
+  const logout = async () => {
+    generation.current++;
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error();
+      localStorage.removeItem(identityKey); sessionStorage.removeItem('epea:id-token');
+      setUser(null); setNeedsLogin(true); setShowLogin(false); setError('');
+    } catch { setError('目前無法完成登出，請恢復連線後再試。'); }
+  };
+  if (!user) return <>{checking ? <main className="recovery-page"><div className="brand-symbol">e.</div><p role="status">正在開啟你的帳本…</p></main> : <Identity onLogin={login}/>} {error && <p className="notice error" role="alert">{error}</p>}</>;
+  return <>{needsLogin && <div className="notice warning" role="status">登入需要重新確認。你仍可記帳，紀錄會先保存在此裝置，登入後自動同步。 <button className="text-button" onClick={() => setShowLogin(true)}>確認 Google 登入</button></div>}{error && <p className="notice warning" role="status">{error}</p>}{showLogin && <><button className="button secondary" onClick={() => setShowLogin(false)}>返回記帳</button><Identity onLogin={login}/></>}<div hidden={showLogin}><Ledger key={user.id} user={user} token="" logout={logout}/></div></>;
 }
 export default function App() { useNativeViewport(); return <Boundary><BrowserRouter><Session/></BrowserRouter></Boundary>; }
